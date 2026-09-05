@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.env
+.env.local
+.env*.local
+docs
+*.md
+!README.md
+
+# existing local MediaMTX Windows install artifacts (not part of the web image)
+mediamtx.exe
+mediamtx.yml
+auto.crt
+auto.key

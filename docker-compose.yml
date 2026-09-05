@@ -1,0 +1,41 @@
+# Full self-host stack: MediaMTX + the Next.js viewer app, on one machine.
+#
+# If you're deploying the web app to Vercel instead (recommended, see
+# docs/VERCEL_DEPLOYMENT.md), you only need the `mediamtx` service from
+# this file - run `docker compose up -d mediamtx`.
+#
+# Configure secrets in a `.env` file next to this one (see .env.example).
+
+services:
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    container_name: mediamtx
+    restart: unless-stopped
+    ports:
+      - "8554:8554"      # RTSP
+      - "1935:1935"      # RTMP (OBS publishes here)
+      - "8888:8888"      # HLS
+      - "8889:8889"      # WebRTC / WHEP HTTP signaling
+      - "8189:8189/udp"  # WebRTC media (ICE/UDP) - must be reachable directly, not via Cloudflare Tunnel
+      - "9997:9997"      # HTTP API (optional - keep firewalled off the public internet)
+    volumes:
+      - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
+    environment:
+      # Public hostname/IP so ICE candidates resolve correctly from outside
+      # your LAN. See docs/CLOUDFLARE_TUNNEL.md.
+      - MTX_WEBRTCADDITIONALHOSTS=${MEDIAMTX_PUBLIC_HOST:-}
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: private-cam-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - CAM_STREAM_URL=${CAM_STREAM_URL}
+      - CAM_USERNAME=${CAM_USERNAME}
+      - CAM_PASSWORD=${CAM_PASSWORD}
+    depends_on:
+      - mediamtx

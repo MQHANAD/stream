@@ -1,0 +1,65 @@
+# Minimal production MediaMTX configuration for the private-cam project.
+#
+# This is a trimmed-down config meant for the Docker/self-host deployment
+# (docker-compose.yml). It is NOT the same file as the ../mediamtx.yml in
+# the project root, which is your existing local Windows install used for
+# local testing - leave that one alone. See docs/MEDIAMTX_CONFIG.md.
+#
+# Full reference (every key + default): https://github.com/bluenviron/mediamtx/blob/main/mediamtx.yml
+
+logLevel: info
+
+# --- RTMP: OBS publishes here ---
+rtmp: yes
+rtmpAddress: :1935
+
+# --- RTSP (optional, useful for other cameras/encoders) ---
+rtsp: yes
+rtspAddress: :8554
+
+# --- HLS: not used by this app, disabled to reduce attack surface ---
+hls: no
+
+# --- WebRTC: the app reads the stream via WHEP on this port ---
+webrtc: yes
+webrtcAddress: :8889
+webrtcLocalUDPAddress: :8189
+webrtcICEServers2:
+  - url: stun:stun.l.google.com:19302
+
+# Public hostname/IP so ICE candidates are reachable from outside your
+# LAN (e.g. "cam.example.com" or a static public IP). Set this via the
+# MTX_WEBRTCADDITIONALHOSTS environment variable in docker-compose.yml
+# instead of hardcoding it here, so the same image works in any env.
+webrtcAdditionalHosts: []
+
+# Control API - lets the Next.js app's /cam/debug page ask "is this path
+# actually publishing right now?" instead of guessing from WHEP errors.
+# Unlike the Windows local install (where 127.0.0.1-only is enough because
+# both processes share one host), the `web` container reaches this one
+# over the Docker network, not loopback - so the "any" user below (open to
+# any source) is scoped by NOT publishing port 9997 outside the Docker
+# host (see the comment on that port in docker-compose.yml). Do not put
+# this port behind a public tunnel.
+api: yes
+apiAddress: :9997
+
+# --- Auth ---
+# Open by default: publishing/reading is only reachable on the ports you
+# expose (see docs/CLOUDFLARE_TUNNEL.md for the recommended network
+# topology). To also require credentials at the MediaMTX layer, replace
+# "any" below with your CAM_USERNAME/CAM_PASSWORD values - see
+# docs/MEDIAMTX_CONFIG.md for the exact steps.
+authInternalUsers:
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: publish
+      - action: read
+      - action: playback
+      - action: api
+
+paths:
+  cam:
+    source: publisher
